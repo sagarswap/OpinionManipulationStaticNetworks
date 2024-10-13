@@ -10,3 +10,8 @@
 *.pptx
 *.doc
 *.docx
+/input
+/output
+*.json
+*.ipynb
+*.tsv

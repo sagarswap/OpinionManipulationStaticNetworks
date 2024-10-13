@@ -1,21 +1,39 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
-#include <unordered_map>
+#include <vector>
+#include <random>
 #include <string>
+
 
 #include "Node.h"
 #include "Edge.h"
 
 class Graph {
 private:
-    std::unordered_map<std::string, Node*> nodes;
+    std::vector<Node*> nodeList;
+    std::vector<Edge*> edgeList;
+    std::string inputFileName, outputFileName;
+    long nodeCount, edgeCount, stat0, stat1, epochLimit, stepCount;
+    double rewiringProbability, relativeSize, startRatio, maliciuousRatio;
+    int avgMaliciousEdgeCount, maliceType;
 
 public:
+    Graph(std::string fName, double rewire, double sRatio, double mRatio, int malice);
     ~Graph();  // Destructor to clean up allocated memory
-    void addNode(const std::string& nodeName);
-    void addEdge(const std::string& from, const std::string& to);
+    void loadData();
+    void generateNetwork(int nodes, int edges);
+    void generateSubnetwork();
+    void beginSimulation();
     void displayGraph() const;
+    Node* getNode(int id) const;
+    void generateSubNetwork();
+    void addMaliciousUsers();
+    long getActiveDiscordantEdgeCount() const;
+
+    int getRandomNumber(int limit) const;
+    double getRandomNumber() const;
+    Node* getRandomNode() const;
 };
 
 #endif // GRAPH_H

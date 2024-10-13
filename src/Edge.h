@@ -6,11 +6,17 @@
 class Node;  // Forward declaration of Node
 
 class Edge {
+    bool active;
 public:
-    Node* from;
-    Node* to;
+    Node* nodeA;
+    Node* nodeB;
+    Edge(Node* nA, Node* nB);
 
-    Edge(Node* fromNode, Node* toNode);
+    void activateEdge();
+    void deactivateEdge();
+    bool isActive() const;
+    Node* getOtherNode(Node* n) const;
+    bool isDiscordant() const;
 };
 
 #endif // EDGE_H
