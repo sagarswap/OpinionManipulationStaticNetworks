@@ -9,6 +9,7 @@ Graph::Graph(std::string fName, double rewire, double sRatio, double mRatio, int
     this->inputFileName=fName;
     this->maliciuousRatio=mRatio;
     this->maliceType=malice;
+    this->stat0=0, stat1=0;
 
     if(fName.substr(0, 5)=="RealW"){
         std::string fname=fName.substr(10);
@@ -76,10 +77,14 @@ void Graph::generateNetwork(int nodes, int edges) {
     this->edgeCount=edges;
     this->avgMaliciousEdgeCount=(int)(edges/nodes);
     for (int i = 0; i < nodes; i++) {
-        if(this->getRandomNumber()<this->startRatio)
+        if(this->getRandomNumber()<this->startRatio){
             nodeList.push_back(new Node(i, false, 0));
-        else
+            stat0++;
+        }
+        else{
             nodeList.push_back(new Node(i, true, 0));
+            stat1++;
+        }
     }
 }
 
@@ -89,8 +94,69 @@ void Graph::generateSubNetwork(){
             edge->deactivateEdge();
 }
 
-void beginSimulation(){
+void Graph::beginSimulation(){
+    this->setEdgeLists();
+    bool altEdgeSelectionAlgo=false;
+    std::cout<<this->getSummary(-1)<<std::endl;
+    std::ofstream outputFile;
+    outputFile.open(this->outputFileName);
+    outputFile<<"Epoch Pop Frac DiscEdge"<<std::endl;
+    int epoch=0;
+    for(; epoch<this->epochLimit && this->aDiscordantEdges.size()>0; epoch++){
+        for(int step=0; step< this->stepCount && this->aDiscordantEdges.size()>0; step++){
+            int edgeIndex=this->getRandomNumber(this->aDiscordantEdges.size()-1);
+            Edge* curEdge=aDiscordantEdges[edgeIndex];
+            double decide=this->getRandomNumber();
+            if(decide<=this->rewiringProbability)
+                this->rewire(curEdge, edgeIndex);
+            else
+                this->convince(curEdge, edgeIndex);
 
+        }
+        std::string summary=getSummary(epoch);
+        std::cout<<summary<<std::endl;
+        outputFile << summary <<std::endl;
+    }
+    outputFile << getSummary(epoch) << std::endl;
+    outputFile.close();
+}
+
+void Graph::rewire(Edge* edge, int edgeIndex){
+    Node* node=edge->getNodeWithInactiveEdge();
+    if(node==nullptr)
+        return;
+    Edge* newEdge=node->getRandomInactiveEdge();
+    newEdge->activateEdge();
+    this->aDiscordantEdges.erase(this->aDiscordantEdges.begin()+edgeIndex);
+    if(newEdge->isDiscordant())
+        this->aDiscordantEdges.push_back(newEdge);
+}
+
+void Graph::convince(Edge* edge, int edgeIndex){
+    Node* node; //The node who will change its opinion
+    int m=edge->getMaliciousness();
+    if(m==0){
+        if(this->getRandomNumber()<0.5)
+            node=edge->nodeA;
+        else
+            node=edge->nodeB;
+        node->changeState();
+    }
+    else if(m==1){
+        node=edge->getRealNode(); //Bot will always convince the real person to change their state.
+        node->changeState();
+    }
+    else if(m==4){
+        node=edge->getMaliciousNode(); //The Cyborg will convince all the real person it is connected to, to switch their state to him
+        std::vector<Edge*> maliciousEdges=node->getNeighbours();
+        for(Edge* e: maliciousEdges){
+            if(e->isDiscordant() && e->isActive()){
+                Node* n=e->getRealNode();
+                n->changeState();
+            }
+        }
+    }
+    this->setEdgeLists();
 }
 
 Node* Graph::getNode(int id) const {
@@ -120,6 +186,21 @@ void Graph::addMaliciousUsers() {
     this->nodeCount+=users;
 }
 
+void Graph::setEdgeLists() {
+    this->aDiscordantEdges.clear();
+    this->inactiveEdges.clear();
+    for(const auto& edge: this->edgeList){
+        if(edge->isDiscordant() && edge->isActive())
+            this->aDiscordantEdges.push_back(edge);
+        else if(!edge->isActive())
+            this->inactiveEdges.push_back(edge);
+    }
+}
+
+Edge* Graph::getRandomInactiveEdge() const {
+    return this->inactiveEdges[this->getRandomNumber(this->inactiveEdges.size()-1)];
+}
+
 long Graph::getActiveDiscordantEdgeCount() const {
     long count=0;
     for(const auto& edge: this->edgeList){
@@ -129,6 +210,11 @@ long Graph::getActiveDiscordantEdgeCount() const {
     return count;
 }
 
+std::string Graph::getSummary(int epoch){
+    std::ostringstream oss;
+    oss<<(epoch+1)<<" "<<this->stat0<<" "<<(this->stat0/(this->stat1*1.0+this->stat0*1.0))<<" "<<this->aDiscordantEdges.size();
+    return oss.str();
+}
 // Display all nodes and their edges
 void Graph::displayGraph() const {
     for (const auto& node : this->nodeList) 

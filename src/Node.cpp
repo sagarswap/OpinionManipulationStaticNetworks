@@ -16,6 +16,10 @@ bool Node::getState() const{
     return this->state;
 }
 
+int Node::getMalice() const {
+    return this->malice;
+}
+
 void Node::changeState() {
     if(!this->isMalicious())
         this->state=!this->state;
@@ -164,6 +168,25 @@ Node* Node::getActiveDiscordantEdgeNode() const {
             return b;
         return a;
     }
+}
+
+Edge* Node::getRandomInactiveEdge() const {
+    std::vector<Edge*> candidates;
+    for(auto& edge: neighbours){
+        if(!edge->isActive()){
+            candidates.push_back(edge);
+        }
+    }
+    if(candidates.size()>1)
+        return candidates[this->getRandomNumber(candidates.size()-1)];
+    else if( candidates.size()==1)
+        return candidates[0];
+    else 
+        return nullptr;
+}
+
+std::vector<Edge*> Node::getNeighbours() const {
+    return this->neighbours;
 }
 
 int Node::getRandomNumber(int limit) const {

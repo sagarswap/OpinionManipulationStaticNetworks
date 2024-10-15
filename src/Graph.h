@@ -13,6 +13,8 @@ class Graph {
 private:
     std::vector<Node*> nodeList;
     std::vector<Edge*> edgeList;
+    std::vector<Edge*> aDiscordantEdges;
+    std::vector<Edge*> inactiveEdges;
     std::string inputFileName, outputFileName;
     long nodeCount, edgeCount, stat0, stat1, epochLimit, stepCount;
     double rewiringProbability, relativeSize, startRatio, maliciuousRatio;
@@ -30,7 +32,12 @@ public:
     void generateSubNetwork();
     void addMaliciousUsers();
     long getActiveDiscordantEdgeCount() const;
-
+    void setEdgeLists();
+    void rewire(Edge* edge, int edgeIndex);
+    void convince(Edge* edge, int edgeIndex);
+    Edge* getRandomInactiveEdge() const;
+    
+    std::string getSummary(int epoch);
     int getRandomNumber(int limit) const;
     double getRandomNumber() const;
     Node* getRandomNode() const;
