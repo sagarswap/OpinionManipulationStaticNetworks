@@ -18,6 +18,7 @@ class Node {
 public:
     Node(int nodeId, int bot, bool state);
     bool getState() const;
+    int getMalice() const;
     void changeState();
     void addNeighbour(Edge* edge);
     void printNeighbours() const;
@@ -30,6 +31,8 @@ public:
     bool hasActiveDiscordantEdge() const;
     long getActiveDiscordantEdgeCount() const;
     Node* getActiveDiscordantEdgeNode() const;
+    Edge* getRandomInactiveEdge() const;
+    std::vector<Edge*> getNeighbours() const;
 
     int getRandomNumber(int limit) const;
 };
