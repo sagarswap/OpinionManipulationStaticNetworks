@@ -146,6 +146,17 @@ void Graph::convince(Edge* edge, int edgeIndex){
         node=edge->getRealNode(); //Bot will always convince the real person to change their state.
         node->changeState();
     }
+    else if(m==3){
+        node=edge->getRealNode();
+        std::vector<Edge*> victims=node->getNeighbours();
+        std::vector<Edge*> candidates;
+        for(Edge* edge: victims){
+            if(!edge->isDiscordant())
+                candidates.push_back(edge);
+        }
+        Node* fNode=candidates[this->getRandomNumber(candidates.size()-1)]->getOtherNode(node);
+        fNode->changeState();
+    }
     else if(m==4){
         node=edge->getMaliciousNode(); //The Cyborg will convince all the real person it is connected to, to switch their state to him
         std::vector<Edge*> maliciousEdges=node->getNeighbours();

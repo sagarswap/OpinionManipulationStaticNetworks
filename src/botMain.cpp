@@ -1,7 +1,7 @@
 #include "Graph.h"
 
 int main() {
-    Graph* graph=new Graph("RealWorld/facebookArtist", 0.5, 0.5, 0.05);
+    Graph* graph=new Graph("RealWorld/facebookArtist", 0.5, 0.5, 0.0, 0);
     graph->loadData();
     graph->displayGraph();
     return 0;
