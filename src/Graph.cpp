@@ -5,21 +5,22 @@ Graph::Graph(std::string fName, double rewire, double sRatio, double mRatio, int
     this->rewiringProbability=rewire;
     this->startRatio=sRatio;
     this->epochLimit=100000;
-    this->stepCount=100;
+    this->stepCount=200;
     this->inputFileName=fName;
     this->maliciuousRatio=mRatio;
     this->maliceType=malice;
     this->stat0=0, stat1=0;
+    std::string malFolName=getMaliciousFileName();
 
     if(fName.substr(0, 5)=="RealW"){
         std::string fname=fName.substr(10);
         this->inputFileName="../input/"+fName+".txt";
-        this->outputFileName="../output/bots/"+fName+"/s"+std::to_string(sRatio)+"_r"+std::to_string(rewire)+"_m"+std::to_string(mRatio)+"_"+std::to_string(getRandomNumber(10000))+".txt";
+        this->outputFileName="../output/"+fName+"/"+malFolName+"/s"+std::to_string(sRatio)+"_r"+std::to_string(rewire)+"_m"+std::to_string(mRatio)+"_"+std::to_string(getRandomNumber(10000))+".txt";
     }
     else if(fName.substr(0, 5)=="Watts"){
         std::string pVal=fName.substr(fName.size()-2, 2)+"/";
         this->inputFileName="../input/"+fName+".txt";
-        this->outputFileName="../output/bots/"+fName+"/s"+std::to_string(sRatio)+"_r"+std::to_string(rewire)+"_m"+std::to_string(mRatio)+"_p"+pVal+"_"+std::to_string(getRandomNumber(10000))+".txt";
+        this->outputFileName="../output/"+fName+"/"+malFolName+"/s"+std::to_string(sRatio)+"_r"+std::to_string(rewire)+"_m"+std::to_string(mRatio)+"_p"+pVal+"_"+std::to_string(getRandomNumber(10000))+".txt";
     }
 }
 
@@ -51,19 +52,20 @@ void Graph::loadData(){
         is>>outputNode;
         if(cc==0){
             std::cout<<"Start Node Generation"<<std::endl;
-            generateNetwork(inputNode, outputNode);
+            this->generateNetwork(inputNode, outputNode);
             cc++;
         }
-        else{
+        else if(inputNode>=0 && outputNode>=0){
+            std::cout<<inputNode<<", "<<outputNode<<std::endl;
             if(inputNode==outputNode)
                 continue; //prevents edges into self
             Node* node1=getNode(inputNode);
             Node* node2=getNode(outputNode);
             Edge* edge=new Edge(node1, node2);
             edgeList.push_back(edge);
-            node1->addNeighbour(edge);
-            node2->addNeighbour(edge);
         }        
+        inputNode=-1;
+        outputNode=-1;
     }
     std::cout<<"Data Loaded"<<std::endl;
     file.close();
@@ -75,42 +77,41 @@ void Graph::loadData(){
 void Graph::generateNetwork(int nodes, int edges) {
     this->nodeCount=nodes;
     this->edgeCount=edges;
-    this->avgMaliciousEdgeCount=(int)(edges/nodes);
+    this->avgMaliciousEdgeCount=(edges/nodes)+1;
     for (int i = 0; i < nodes; i++) {
         if(this->getRandomNumber()<this->startRatio){
-            nodeList.push_back(new Node(i, false, 0));
-            stat0++;
+            nodeList.push_back(new Node(i, 0, false));
+            this->stat0++;
         }
         else{
-            nodeList.push_back(new Node(i, true, 0));
-            stat1++;
+            nodeList.push_back(new Node(i, 0, true));
+            this->stat1++;
         }
     }
 }
 
 void Graph::generateSubNetwork(){
     for(auto& edge: edgeList)
-        if(this->getRandomNumber()>0.8)
+        if(this->getRandomNumber()>0.7)
             edge->deactivateEdge();
 }
 
 void Graph::beginSimulation(){
     this->setEdgeLists();
     bool altEdgeSelectionAlgo=false;
-    std::cout<<this->getSummary(-1)<<std::endl;
+    std::cout<<"Start"<<this->getSummary(-1)<<std::endl;
     std::ofstream outputFile;
     outputFile.open(this->outputFileName);
     outputFile<<"Epoch Pop Frac DiscEdge"<<std::endl;
     int epoch=0;
+    std::cout<<this->aDiscordantEdges.size()<<std::endl;
     for(; epoch<this->epochLimit && this->aDiscordantEdges.size()>0; epoch++){
         for(int step=0; step< this->stepCount && this->aDiscordantEdges.size()>0; step++){
-            int edgeIndex=this->getRandomNumber(this->aDiscordantEdges.size()-1);
-            Edge* curEdge=aDiscordantEdges[edgeIndex];
-            double decide=this->getRandomNumber();
-            if(decide<=this->rewiringProbability)
-                this->rewire(curEdge, edgeIndex);
+            Edge* curEdge=this->getRandomActiveDiscordantEdge();
+            if(this->getRandomNumber()<=this->rewiringProbability)
+                this->rewire(curEdge);
             else
-                this->convince(curEdge, edgeIndex);
+                this->convince(curEdge);
 
         }
         std::string summary=getSummary(epoch);
@@ -121,18 +122,18 @@ void Graph::beginSimulation(){
     outputFile.close();
 }
 
-void Graph::rewire(Edge* edge, int edgeIndex){
+void Graph::rewire(Edge* edge){
     Node* node=edge->getNodeWithInactiveEdge();
     if(node==nullptr)
         return;
-    Edge* newEdge=node->getRandomInactiveEdge();
+    Edge* newEdge=node->getRandomHarmoniousInactiveEdge();
     newEdge->activateEdge();
-    this->aDiscordantEdges.erase(this->aDiscordantEdges.begin()+edgeIndex);
+    this->aDiscordantEdges.remove(edge);
     if(newEdge->isDiscordant())
         this->aDiscordantEdges.push_back(newEdge);
 }
 
-void Graph::convince(Edge* edge, int edgeIndex){
+void Graph::convince(Edge* edge){
     Node* node; //The node who will change its opinion
     int m=edge->getMaliciousness();
     if(m==0){
@@ -140,11 +141,21 @@ void Graph::convince(Edge* edge, int edgeIndex){
             node=edge->nodeA;
         else
             node=edge->nodeB;
+        if(node->getState()){
+            this->stat0++;
+            this->stat1--;
+        }
+        else{
+            this->stat0--;
+            this->stat1++;
+        }
         node->changeState();
     }
     else if(m==1){
         node=edge->getRealNode(); //Bot will always convince the real person to change their state.
         node->changeState();
+        this->stat0++;
+        this->stat1--;
     }
     else if(m==3){
         node=edge->getRealNode();
@@ -156,6 +167,8 @@ void Graph::convince(Edge* edge, int edgeIndex){
         }
         Node* fNode=candidates[this->getRandomNumber(candidates.size()-1)]->getOtherNode(node);
         fNode->changeState();
+        this->stat0++;
+        this->stat1--;
     }
     else if(m==4){
         node=edge->getMaliciousNode(); //The Cyborg will convince all the real person it is connected to, to switch their state to him
@@ -164,6 +177,8 @@ void Graph::convince(Edge* edge, int edgeIndex){
             if(e->isDiscordant() && e->isActive()){
                 Node* n=e->getRealNode();
                 n->changeState();
+                this->stat0++;
+                this->stat1--;
             }
         }
     }
@@ -179,6 +194,8 @@ Node* Graph::getNode(int id) const {
 }
 
 void Graph::addMaliciousUsers() {
+    if(this->maliceType==0 || this->maliciuousRatio==0.0)
+        return;
     int users=(int)(this->nodeCount*this->maliciuousRatio);
     for (int i = 0; i < users; i++) {
         Node* mal=new Node(this->nodeCount+i, this->maliceType, false);
@@ -209,7 +226,21 @@ void Graph::setEdgeLists() {
 }
 
 Edge* Graph::getRandomInactiveEdge() const {
-    return this->inactiveEdges[this->getRandomNumber(this->inactiveEdges.size()-1)];
+    if(this->inactiveEdges.empty())
+        return nullptr;
+    int rand=this->getRandomNumber(this->inactiveEdges.size()-1);
+    auto it=this->inactiveEdges.begin();
+    std::advance(it, rand);
+    return *it;
+}
+
+Edge* Graph::getRandomActiveDiscordantEdge() const {
+    if(this->aDiscordantEdges.empty())
+        return nullptr;
+    int rand=this->getRandomNumber(this->aDiscordantEdges.size()-1);
+    auto it=this->aDiscordantEdges.begin();
+    std::advance(it, rand);
+    return *it;
 }
 
 long Graph::getActiveDiscordantEdgeCount() const {
@@ -255,4 +286,29 @@ Node* Graph::getRandomNode() const {
         return nullptr;
     }
     return node;
+}
+
+std::string Graph::getMaliciousFileName() const {
+    if(this->maliceType==0)
+        return "noMalice";
+    else if(this->maliceType==1)
+        return "bots";
+    else if(this->maliceType==2)
+        return "hacker";
+    else if(this->maliceType==3)
+        return "troll";
+    else
+        return "cyborg";
+}
+
+void Graph::addNode(Node* node){
+    this->nodeList.push_back(node);
+}
+
+void Graph::addEdge(Edge* edge){
+    this->edgeList.push_back(edge);
+}
+
+Graph::Graph(){
+
 }

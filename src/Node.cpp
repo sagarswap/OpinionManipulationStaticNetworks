@@ -12,6 +12,10 @@ Node::Node(int nodeId, int mal, bool state) {
         this->malicious=true;
 }
 
+int Node::getId() const{
+    return nodeId;
+}
+
 bool Node::getState() const{
     return this->state;
 }
@@ -27,45 +31,36 @@ void Node::changeState() {
 
 // Add an edge to this node
 void Node::addNeighbour(Edge* edge) {
-    neighbours.push_back(edge);
+    if(this==edge->nodeA || this==edge->nodeB)
+        neighbours.push_back(edge);
+    else
+        std::cout<<"Edge has no reference to base node"<<std::endl;
 }
 
 // Print all edges connected to this node
-void Node::printNeighbours() const {
-    std::cout << nodeId << " -> ";
+void Node::printNeighbours() {
+    std::cout << nodeId << "("<<this->state<<")" << " -> ";
     for (const auto& edge : neighbours) {
-        Node* A=edge->nodeA;
-        Node* B=edge->nodeB;
-        if(this==A)
-            std::cout<<A->nodeId<<", ";
-        else
-            std::cout << B->nodeId <<", ";
+        Node* n=edge->getOtherNode(this);
+        std::cout << n->getId() << ", ";
     }
     std::cout << std::endl;
 }
 
-bool Node::isNeighbour(Node* node) const{
+bool Node::isNeighbour(Node* node){
     for(const auto& edge: neighbours){
-        Node* n;
-        if(edge->nodeA==this)
-            n=edge->nodeB;
-        else
-            n=edge->nodeA;
+        Node* n=edge->getOtherNode(this);
         if(n == node)
             return true;
     }
     return false;
 }
 
-bool Node::isActiveNeighour(Node* node) const{
+bool Node::isActiveNeighbour(Node* node){
     for(const auto& edge: neighbours){
         if(edge->isActive()){
-            Node* n;
-            if(edge->nodeA==this)
-                n=edge->nodeB;
-            else
-                n=edge->nodeA;
-            if(n == node)
+            Node* n=edge->getOtherNode(this);
+            if(n==node)
                 return true;
         }
     }
@@ -76,19 +71,9 @@ void Node::activateEdge(Node* node){
     for(auto& edge: neighbours){
         if(edge->isActive())
             continue;
-        Node* n;
-        if(edge->nodeA==this){
-            if(edge->nodeB==node){
-                edge->activateEdge();
-                return;
-            }
-        }
-        else{
-            if(edge->nodeA==node){
-                edge->activateEdge();
-                return;
-            }
-        }
+        Node* n=edge->getOtherNode(this);
+        if(n==node)
+            edge->activateEdge();
     }
     std::cout<<"Edge activation not performed"<<std::endl;
 }
@@ -97,21 +82,11 @@ void Node::deactivateEdge(Node* node){
     for(auto& edge: neighbours){
         if(!edge->isActive())
             continue;
-        Node* n;
-        if(edge->nodeA==this){
-            if(edge->nodeB==node){
-                edge->deactivateEdge();
-                return;
-            }
-        }
-        else{
-            if(edge->nodeA==node){
-                edge->deactivateEdge();
-                return;
-            }
-        }
+        Node* n=edge->getOtherNode(this);
+        if(n==node)
+            edge->deactivateEdge();
     }
-    std::cout<<"Edge activation not performed"<<std::endl;
+    std::cout<<"Edge de-activation not performed"<<std::endl;
 }
 
 bool Node::isMalicious() const{
@@ -143,37 +118,29 @@ long Node::getActiveDiscordantEdgeCount() const{
     return count;
 }
 
-Node* Node::getActiveDiscordantEdgeNode() const {
-    std::vector<Edge*> candidates;
+Node* Node::getRandomActiveDiscordantEdgeNode() {
+    std::vector<Node*> candidates;
     for(auto& edge: neighbours){
         if(edge->isDiscordant() && edge->isActive())
-            candidates.push_back(edge);
+            candidates.push_back(edge->getOtherNode(this));
     }
     if(candidates.size()==0){
         std::cout<<"No Active Discordant Edge for node"<<this->nodeId<<std::endl;
         return nullptr;
     }
-    else if(candidates.size()==1){
-        Node* a=candidates[0]->nodeA;
-        Node* b=candidates[0]->nodeB;
-        if(this==a)
-            return b;
-        return a;
-    }
-    else{
-        Edge* e=candidates[this->getRandomNumber(candidates.size()-1)];
-        Node* a=e->nodeA;
-        Node* b=e->nodeB;
-        if(this==a)
-            return b;
-        return a;
-    }
+    else if(candidates.size()==1)
+        return candidates[0];
+    else
+        return candidates[this->getRandomNumber(candidates.size()-1)];
 }
 
-Edge* Node::getRandomInactiveEdge() const {
+/**Returns a Harmonious inactive edge.
+ * If harmonious edge is not present, will return any inactive edge.
+*/
+Edge* Node::getRandomHarmoniousInactiveEdge() const {
     std::vector<Edge*> candidates;
-    for(auto& edge: neighbours){
-        if(!edge->isActive()){
+    for(const auto& edge: neighbours){
+        if(!edge->isActive() && !edge->isDiscordant()){
             candidates.push_back(edge);
         }
     }
@@ -181,8 +148,20 @@ Edge* Node::getRandomInactiveEdge() const {
         return candidates[this->getRandomNumber(candidates.size()-1)];
     else if( candidates.size()==1)
         return candidates[0];
-    else 
-        return nullptr;
+    else{
+        candidates.clear();
+        for(const auto& edge: neighbours){
+            if(!edge->isActive())
+                candidates.push_back(edge);
+        }
+        if(candidates.size()>1)
+            return candidates[this->getRandomNumber(candidates.size()-1)];
+        else if(candidates.size()==1)
+            return candidates[0];
+        else
+            return nullptr;
+    } 
+        
 }
 
 std::vector<Edge*> Node::getNeighbours() const {
