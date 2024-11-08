@@ -56,7 +56,6 @@ void Graph::loadData(){
             cc++;
         }
         else if(inputNode>=0 && outputNode>=0){
-            std::cout<<inputNode<<", "<<outputNode<<std::endl;
             if(inputNode==outputNode)
                 continue; //prevents edges into self
             Node* node1=getNode(inputNode);
@@ -191,6 +190,17 @@ Node* Graph::getNode(int id) const {
         return nullptr;
     }
     return this->nodeList[id];
+}
+
+Edge* Graph::getEdge(Node* a, Node* b) const {
+    for(Edge* e: this->edgeList){
+        if(e->nodeA==a || e->nodeB==a){
+            Node* n=e->getOtherNode(a);
+            if(n==b)
+                return e;
+        }
+    }
+    return nullptr;
 }
 
 void Graph::addMaliciousUsers() {

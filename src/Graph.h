@@ -11,7 +11,7 @@
 #include "Edge.h"
 
 class Graph {
-private:
+public: //Set public for testing, else keep private
     std::vector<Node*> nodeList;
     std::vector<Edge*> edgeList;
     std::list<Edge*> aDiscordantEdges;
@@ -21,7 +21,7 @@ private:
     double rewiringProbability, relativeSize, startRatio, maliciuousRatio;
     int avgMaliciousEdgeCount, maliceType;
 
-public:
+//public: //always public
     Graph(std::string fName, double rewire, double sRatio, double mRatio, int malice);
     ~Graph();  // Destructor to clean up allocated memory
     void loadData();
@@ -30,6 +30,7 @@ public:
     void beginSimulation();
     void displayGraph() const;
     Node* getNode(int id) const;
+    Edge* getEdge(Node* a, Node* b) const;
     void generateSubNetwork();
     void addMaliciousUsers();
     long getActiveDiscordantEdgeCount() const;
