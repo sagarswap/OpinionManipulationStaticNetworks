@@ -2,11 +2,11 @@
 #include "Node.h"
 
 // Constructor to initialize an edge between two nodes
-Edge::Edge(Node* nA, Node* nB) {
-    this->nodeA=nA;
-    this->nodeB=nB;
-    active=true;
-}
+Edge::Edge(Node* nA, Node* nB)
+    : nodeA(nA), nodeB(nB), active(true) { 
+        nA->addNeighbour(this);
+        nB->addNeighbour(this);
+    }
 
 void Edge::activateEdge(){
     active=true;
@@ -31,19 +31,6 @@ bool Edge::isDiscordant() const {
         return true;
     return false;
 } 
-
-bool Edge::hasBot() const {
-    return this->nodeA->isMalicious() || this->nodeB->isMalicious();
-}
-
-Node* Edge::getBot() const {
-    if(this->nodeA->isMalicious())
-        return nodeA;
-    else if(this->nodeB->isMalicious())
-        return nodeB;
-    else
-        return nullptr;
-}
 
 Node* Edge::getNodeWithInactiveEdge() const {
     if(this->nodeA->hasInactiveEdge() && this->nodeB->hasInactiveEdge()){
@@ -74,7 +61,9 @@ Node* Edge::getMaliciousNode() const {
 }
 
 Node* Edge::getRealNode() const {
-    if(!this->nodeA->isMalicious())
+    if(!this->nodeA->isMalicious() && !this->nodeB->isMalicious())
+        return nullptr;
+    else if(!this->nodeA->isMalicious())
         return nodeA;
     else if(!this->nodeB->isMalicious())
         return nodeB;

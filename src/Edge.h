@@ -18,8 +18,6 @@ public:
     bool isActive() const;
     Node* getOtherNode(Node* n) const;
     bool isDiscordant() const;
-    bool hasBot() const;
-    Node* getBot() const;
     Node* getNodeWithInactiveEdge() const;
     int getMaliciousness() const;
     Node* getMaliciousNode() const;

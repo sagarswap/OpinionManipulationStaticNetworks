@@ -17,22 +17,23 @@ class Node {
     std::vector<Edge*> neighbours; // List of edges connected to this node
 public:
     Node(int nodeId, int bot, bool state);
+    int getId() const;
     bool getState() const;
+    std::vector<Edge*> getNeighbours() const;
     int getMalice() const;
     void changeState();
     void addNeighbour(Edge* edge);
-    void printNeighbours() const;
-    bool isNeighbour(Node* node) const;
-    bool isActiveNeighour(Node* node) const;
+    void printNeighbours();
+    bool isNeighbour(Node* node);
+    bool isActiveNeighbour(Node* node);
     void activateEdge(Node* node);
     void deactivateEdge(Node* node);
     bool isMalicious() const;
     bool hasInactiveEdge() const;
     bool hasActiveDiscordantEdge() const;
     long getActiveDiscordantEdgeCount() const;
-    Node* getActiveDiscordantEdgeNode() const;
-    Edge* getRandomInactiveEdge() const;
-    std::vector<Edge*> getNeighbours() const;
+    Node* getRandomActiveDiscordantEdgeNode();
+    Edge* getRandomHarmoniousInactiveEdge() const;
 
     int getRandomNumber(int limit) const;
 };
