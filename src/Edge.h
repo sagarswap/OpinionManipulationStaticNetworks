@@ -12,6 +12,7 @@ public:
     Node* nodeA;
     Node* nodeB;
     Edge(Node* nA, Node* nB);
+    std::string edgeName;
 
     void activateEdge();
     void deactivateEdge();

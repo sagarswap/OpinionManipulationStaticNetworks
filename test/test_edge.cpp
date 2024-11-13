@@ -51,6 +51,10 @@ int main(){
     assert(e1->getRealNode()==nullptr);
     assert(e4->getRealNode()==n1);
     std::cout << "Test 7 passed: getRealNode() method." << std::endl;
+
+    //testing getEdgeName()
+    assert(e1->edgeName=="0_1");
+    std::cout << "test 8 passed: getEdgeName property" <<std::endl;
     
     delete n1, n2, n3, n4, e1, e2, e3, e4;
 }

@@ -6,6 +6,7 @@ Edge::Edge(Node* nA, Node* nB)
     : nodeA(nA), nodeB(nB), active(true) { 
         nA->addNeighbour(this);
         nB->addNeighbour(this);
+        this->edgeName=std::to_string(nA->getId())+"_"+std::to_string(nB->getId());
     }
 
 void Edge::activateEdge(){
