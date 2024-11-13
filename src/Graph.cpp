@@ -127,9 +127,9 @@ void Graph::rewire(Edge* edge){
         return;
     Edge* newEdge=node->getRandomHarmoniousInactiveEdge();
     newEdge->activateEdge();
-    this->aDiscordantEdges.remove(edge);
-    if(newEdge->isDiscordant())
-        this->aDiscordantEdges.push_back(newEdge);
+    // this->aDiscordantEdges.remove(edge);
+    // if(newEdge->isDiscordant())
+    //     this->aDiscordantEdges.push_back(newEdge);
 }
 
 void Graph::convince(Edge* edge){
@@ -227,30 +227,40 @@ void Graph::addMaliciousUsers() {
 void Graph::setEdgeLists() {
     this->aDiscordantEdges.clear();
     this->inactiveEdges.clear();
+    this->aDiscordantEdgesStr.clear();
+    this->inactiveEdgesStr.clear();
     for(const auto& edge: this->edgeList){
-        if(edge->isDiscordant() && edge->isActive())
-            this->aDiscordantEdges.push_back(edge);
-        else if(!edge->isActive())
-            this->inactiveEdges.push_back(edge);
+        if(edge->isDiscordant() && edge->isActive()){
+            this->aDiscordantEdgesStr.push_back(edge->edgeName);
+            this->aDiscordantEdges[edge->edgeName]=edge;
+        }
+        else if(!edge->isActive()){
+            this->inactiveEdgesStr.push_back(edge->edgeName);
+            this->inactiveEdges[edge->edgeName]=edge;
+        }
     }
 }
 
-Edge* Graph::getRandomInactiveEdge() const {
+Edge* Graph::getRandomInactiveEdge() {
     if(this->inactiveEdges.empty())
         return nullptr;
-    int rand=this->getRandomNumber(this->inactiveEdges.size()-1);
-    auto it=this->inactiveEdges.begin();
-    std::advance(it, rand);
-    return *it;
+    int index=this->getRandomNumber(this->inactiveEdgesStr.size()-1);
+    std::string eName=this->inactiveEdgesStr[index];
+    Edge* e=this->inactiveEdges[eName];
+    this->inactiveEdges.erase(eName);
+    this->inactiveEdgesStr.erase(this->inactiveEdgesStr.begin()+index);
+    return e;
 }
 
-Edge* Graph::getRandomActiveDiscordantEdge() const {
+Edge* Graph::getRandomActiveDiscordantEdge() {
     if(this->aDiscordantEdges.empty())
         return nullptr;
-    int rand=this->getRandomNumber(this->aDiscordantEdges.size()-1);
-    auto it=this->aDiscordantEdges.begin();
-    std::advance(it, rand);
-    return *it;
+    int index=this->getRandomNumber(this->aDiscordantEdges.size()-1);
+    std::string eName=this->aDiscordantEdgesStr[index];
+    Edge* e=this->aDiscordantEdges[eName];
+    this->aDiscordantEdges.erase(eName);
+    this->aDiscordantEdgesStr.erase(this->aDiscordantEdgesStr.begin()+index);
+    return e;
 }
 
 long Graph::getActiveDiscordantEdgeCount() const {

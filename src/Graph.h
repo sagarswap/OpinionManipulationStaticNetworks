@@ -5,7 +5,7 @@
 #include <list>
 #include <random>
 #include <string>
-
+#include <unordered_map>
 
 #include "Node.h"
 #include "Edge.h"
@@ -14,8 +14,10 @@ class Graph {
 public: //Set public for testing, else keep private
     std::vector<Node*> nodeList;
     std::vector<Edge*> edgeList;
-    std::list<Edge*> aDiscordantEdges;
-    std::list<Edge*> inactiveEdges;
+    std::unordered_map<std::string, Edge*> aDiscordantEdges;
+    std::unordered_map<std::string, Edge*> inactiveEdges;
+    std::vector<std::string> aDiscordantEdgesStr;
+    std::vector<std::string> inactiveEdgesStr;
     std::string inputFileName, outputFileName;
     long nodeCount, edgeCount, stat0, stat1, epochLimit, stepCount;
     double rewiringProbability, relativeSize, startRatio, maliciuousRatio;
@@ -38,8 +40,8 @@ public: //Set public for testing, else keep private
     void updateEdgeLists(Node* node);
     void rewire(Edge* edge);
     void convince(Edge* edge);
-    Edge* getRandomInactiveEdge() const;
-    Edge* getRandomActiveDiscordantEdge() const;
+    Edge* getRandomInactiveEdge();
+    Edge* getRandomActiveDiscordantEdge();
     
     //Util
     std::string getSummary(int epoch);
