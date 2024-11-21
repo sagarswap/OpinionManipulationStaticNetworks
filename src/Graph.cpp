@@ -106,12 +106,11 @@ void Graph::beginSimulation(){
     std::cout<<this->aDiscordantEdges.size()<<std::endl;
     for(; epoch<this->epochLimit && this->aDiscordantEdges.size()>0; epoch++){
         for(int step=0; step< this->stepCount && this->aDiscordantEdges.size()>0; step++){
-            Edge* curEdge=this->getRandomActiveDiscordantEdge();
+            Edge* curEdge=this->popRandomActiveDiscordantEdge();
             if(this->getRandomNumber()<=this->rewiringProbability)
                 this->rewire(curEdge);
             else
                 this->convince(curEdge);
-
         }
         std::string summary=getSummary(epoch);
         std::cout<<summary<<std::endl;
@@ -126,8 +125,9 @@ void Graph::rewire(Edge* edge){
     if(node==nullptr)
         return;
     Edge* newEdge=node->getRandomHarmoniousInactiveEdge();
-    newEdge->activateEdge();
-    // this->aDiscordantEdges.remove(edge);
+    if(newEdge!=nullptr)
+        newEdge->activateEdge();
+    edge->deactivateEdge();
     // if(newEdge->isDiscordant())
     //     this->aDiscordantEdges.push_back(newEdge);
 }
@@ -149,12 +149,14 @@ void Graph::convince(Edge* edge){
             this->stat1++;
         }
         node->changeState();
+        this->updateEdgeLists(node);
     }
     else if(m==1){
         node=edge->getRealNode(); //Bot will always convince the real person to change their state.
         node->changeState();
         this->stat0++;
         this->stat1--;
+        this->updateEdgeLists(node);
     }
     else if(m==3){
         node=edge->getRealNode();
@@ -181,7 +183,6 @@ void Graph::convince(Edge* edge){
             }
         }
     }
-    this->setEdgeLists();
 }
 
 Node* Graph::getNode(int id) const {
@@ -227,39 +228,29 @@ void Graph::addMaliciousUsers() {
 void Graph::setEdgeLists() {
     this->aDiscordantEdges.clear();
     this->inactiveEdges.clear();
-    this->aDiscordantEdgesStr.clear();
-    this->inactiveEdgesStr.clear();
     for(const auto& edge: this->edgeList){
-        if(edge->isDiscordant() && edge->isActive()){
-            this->aDiscordantEdgesStr.push_back(edge->edgeName);
-            this->aDiscordantEdges[edge->edgeName]=edge;
-        }
-        else if(!edge->isActive()){
-            this->inactiveEdgesStr.push_back(edge->edgeName);
-            this->inactiveEdges[edge->edgeName]=edge;
-        }
+        if(edge->isDiscordant() && edge->isActive())
+            this->aDiscordantEdges.push_back(edge);
+        else if(!edge->isActive())
+            this->inactiveEdges.push_back(edge);
     }
 }
 
-Edge* Graph::getRandomInactiveEdge() {
+Edge* Graph::popRandomInactiveEdge() {
     if(this->inactiveEdges.empty())
         return nullptr;
-    int index=this->getRandomNumber(this->inactiveEdgesStr.size()-1);
-    std::string eName=this->inactiveEdgesStr[index];
-    Edge* e=this->inactiveEdges[eName];
-    this->inactiveEdges.erase(eName);
-    this->inactiveEdgesStr.erase(this->inactiveEdgesStr.begin()+index);
+    int index=this->getRandomNumber(this->inactiveEdges.size()-1);
+    Edge* e=this->inactiveEdges[index];
+    this->inactiveEdges.erase(this->inactiveEdges.begin()+index);
     return e;
 }
 
-Edge* Graph::getRandomActiveDiscordantEdge() {
+Edge* Graph::popRandomActiveDiscordantEdge() {
     if(this->aDiscordantEdges.empty())
         return nullptr;
     int index=this->getRandomNumber(this->aDiscordantEdges.size()-1);
-    std::string eName=this->aDiscordantEdgesStr[index];
-    Edge* e=this->aDiscordantEdges[eName];
-    this->aDiscordantEdges.erase(eName);
-    this->aDiscordantEdgesStr.erase(this->aDiscordantEdgesStr.begin()+index);
+    Edge* e=this->aDiscordantEdges[index];
+    this->aDiscordantEdges.erase(this->aDiscordantEdges.begin()+index);
     return e;
 }
 
@@ -270,6 +261,22 @@ long Graph::getActiveDiscordantEdgeCount() const {
             count++;
     }
     return count;
+}
+
+void Graph::updateEdgeLists(Node* node){
+    std::vector<Edge*> neighbours=node->getNeighbours();
+    for(Edge* edge: neighbours){
+        if(edge->isActive()){
+            if(edge->isDiscordant())
+                this->aDiscordantEdges.push_back(edge);
+            else{
+                this->aDiscordantEdges.erase(
+                    std::remove(this->aDiscordantEdges.begin(), this->aDiscordantEdges.end(), edge),
+                    this->aDiscordantEdges.end()
+                );
+            }
+        }
+    }
 }
 
 std::string Graph::getSummary(int epoch){
