@@ -35,12 +35,14 @@ public: //always public
     void addMaliciousUsers();
     long getActiveDiscordantEdgeCount() const;
     void setEdgeLists();
-    void updateEdgeLists(Node* node);
+    void updateEdgeListsAfterConvince(Node* node);
     void rewire(Edge* edge);
     void convince(Edge* edge);
     Edge* popRandomInactiveEdge();
     Edge* popRandomActiveDiscordantEdge();
     void updateEdgeLists(Node* node);
+    void activateEdgeInGraph(Edge* Edge);
+    void deactivateEdgeInGraph(Edge* Edge);
     
     //Util
     std::string getSummary(int epoch);
