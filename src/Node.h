@@ -11,7 +11,7 @@
 class Edge;  // Forward declaration
 
 class Node {
-    int nodeId, malice; //0 -> Real Person, 1 -> Bot, 2 -> Hacker, 3 -> Troll, 4 -> Cyborg
+    int nodeId, malice; //0 -> Real Person, 1 -> Bot, 2 -> Troll
     bool malicious; //false = Not malicious, i.e. Real Person, true = Malicious Node
     bool state;
     std::vector<Edge*> neighbours; // List of edges connected to this node

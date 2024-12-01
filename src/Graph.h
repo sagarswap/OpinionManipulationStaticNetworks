@@ -5,23 +5,23 @@
 #include <list>
 #include <random>
 #include <string>
-
+#include <unordered_map>
 
 #include "Node.h"
 #include "Edge.h"
 
 class Graph {
-public: //Set public for testing, else keep private
+ //Set public for testing, else keep private
     std::vector<Node*> nodeList;
     std::vector<Edge*> edgeList;
-    std::list<Edge*> aDiscordantEdges;
-    std::list<Edge*> inactiveEdges;
+    std::vector<Edge*> aDiscordantEdges;
+    std::vector<Edge*> inactiveEdges;
     std::string inputFileName, outputFileName;
     long nodeCount, edgeCount, stat0, stat1, epochLimit, stepCount;
     double rewiringProbability, relativeSize, startRatio, maliciuousRatio;
     int avgMaliciousEdgeCount, maliceType;
 
-//public: //always public
+public: //always public
     Graph(std::string fName, double rewire, double sRatio, double mRatio, int malice);
     ~Graph();  // Destructor to clean up allocated memory
     void loadData();
@@ -35,11 +35,14 @@ public: //Set public for testing, else keep private
     void addMaliciousUsers();
     long getActiveDiscordantEdgeCount() const;
     void setEdgeLists();
-    void updateEdgeLists(Node* node);
+    void updateEdgeListsAfterConvince(Node* node);
     void rewire(Edge* edge);
     void convince(Edge* edge);
-    Edge* getRandomInactiveEdge() const;
-    Edge* getRandomActiveDiscordantEdge() const;
+    Edge* popRandomInactiveEdge();
+    Edge* popRandomActiveDiscordantEdge();
+    void updateEdgeLists(Node* node);
+    void activateEdgeInGraph(Edge* Edge);
+    void deactivateEdgeInGraph(Edge* Edge);
     
     //Util
     std::string getSummary(int epoch);

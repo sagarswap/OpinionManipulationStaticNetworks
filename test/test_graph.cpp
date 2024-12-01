@@ -93,10 +93,15 @@ int main(){
     assert(hasInactive);
     std::cout<<"Test Case 4 Passed: Inactive edges created"<<std::endl;
 
+    g->setEdgeLists();
+
     //Test getRandomInactiveEdge()
     Edge* e=g->getRandomInactiveEdge();
     if(e!=nullptr)
         assert(!e->isActive());
+    assert(g->inactiveEdges.find(e->edgeName) == g->inactiveEdges.end());
+    auto it2 = std::find(g->inactiveEdgesStr.begin(), g->inactiveEdgesStr.end(), e->edgeName);
+    assert(it2 == g->inactiveEdgesStr.end());
     std::cout<<"Test Case 5 Passed: getRandomInactiveEdge()"<<std::endl;
     
     //Test getRandomActiveDiscordantEdge()
@@ -105,6 +110,9 @@ int main(){
         assert(e->isActive());
         assert(e->isDiscordant());
     }
+    assert(g->aDiscordantEdges.find(e->edgeName) == g->aDiscordantEdges.end());
+    auto it = std::find(g->aDiscordantEdgesStr.begin(), g->aDiscordantEdgesStr.end(), e->edgeName);
+    assert(it == g->aDiscordantEdgesStr.end());
     std::cout<<"Test Case 6 Passed: getRandomActiveDiscordantEdge()"<<std::endl;
 
     //Test for uniform distribution of nubers via random number generator

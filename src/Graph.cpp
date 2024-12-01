@@ -5,7 +5,7 @@ Graph::Graph(std::string fName, double rewire, double sRatio, double mRatio, int
     this->rewiringProbability=rewire;
     this->startRatio=sRatio;
     this->epochLimit=100000;
-    this->stepCount=200;
+    this->stepCount=500;
     this->inputFileName=fName;
     this->maliciuousRatio=mRatio;
     this->maliceType=malice;
@@ -106,12 +106,11 @@ void Graph::beginSimulation(){
     std::cout<<this->aDiscordantEdges.size()<<std::endl;
     for(; epoch<this->epochLimit && this->aDiscordantEdges.size()>0; epoch++){
         for(int step=0; step< this->stepCount && this->aDiscordantEdges.size()>0; step++){
-            Edge* curEdge=this->getRandomActiveDiscordantEdge();
+            Edge* curEdge=this->popRandomActiveDiscordantEdge();
             if(this->getRandomNumber()<=this->rewiringProbability)
                 this->rewire(curEdge);
             else
                 this->convince(curEdge);
-
         }
         std::string summary=getSummary(epoch);
         std::cout<<summary<<std::endl;
@@ -126,10 +125,10 @@ void Graph::rewire(Edge* edge){
     if(node==nullptr)
         return;
     Edge* newEdge=node->getRandomHarmoniousInactiveEdge();
-    newEdge->activateEdge();
-    this->aDiscordantEdges.remove(edge);
-    if(newEdge->isDiscordant())
-        this->aDiscordantEdges.push_back(newEdge);
+    if(newEdge!=nullptr){
+        this->activateEdgeInGraph(newEdge);
+        this->deactivateEdgeInGraph(edge);
+    }
 }
 
 void Graph::convince(Edge* edge){
@@ -149,14 +148,16 @@ void Graph::convince(Edge* edge){
             this->stat1++;
         }
         node->changeState();
+        this->updateEdgeListsAfterConvince(node);
     }
     else if(m==1){
         node=edge->getRealNode(); //Bot will always convince the real person to change their state.
         node->changeState();
         this->stat0++;
         this->stat1--;
+        this->updateEdgeListsAfterConvince(node);
     }
-    else if(m==3){
+    else if(m==2){
         node=edge->getRealNode();
         std::vector<Edge*> victims=node->getNeighbours();
         std::vector<Edge*> candidates;
@@ -169,19 +170,6 @@ void Graph::convince(Edge* edge){
         this->stat0++;
         this->stat1--;
     }
-    else if(m==4){
-        node=edge->getMaliciousNode(); //The Cyborg will convince all the real person it is connected to, to switch their state to him
-        std::vector<Edge*> maliciousEdges=node->getNeighbours();
-        for(Edge* e: maliciousEdges){
-            if(e->isDiscordant() && e->isActive()){
-                Node* n=e->getRealNode();
-                n->changeState();
-                this->stat0++;
-                this->stat1--;
-            }
-        }
-    }
-    this->setEdgeLists();
 }
 
 Node* Graph::getNode(int id) const {
@@ -235,22 +223,22 @@ void Graph::setEdgeLists() {
     }
 }
 
-Edge* Graph::getRandomInactiveEdge() const {
+Edge* Graph::popRandomInactiveEdge() {
     if(this->inactiveEdges.empty())
         return nullptr;
-    int rand=this->getRandomNumber(this->inactiveEdges.size()-1);
-    auto it=this->inactiveEdges.begin();
-    std::advance(it, rand);
-    return *it;
+    int index=this->getRandomNumber(this->inactiveEdges.size()-1);
+    Edge* e=this->inactiveEdges[index];
+    this->inactiveEdges.erase(this->inactiveEdges.begin()+index);
+    return e;
 }
 
-Edge* Graph::getRandomActiveDiscordantEdge() const {
+Edge* Graph::popRandomActiveDiscordantEdge() {
     if(this->aDiscordantEdges.empty())
         return nullptr;
-    int rand=this->getRandomNumber(this->aDiscordantEdges.size()-1);
-    auto it=this->aDiscordantEdges.begin();
-    std::advance(it, rand);
-    return *it;
+    int index=this->getRandomNumber(this->aDiscordantEdges.size()-1);
+    Edge* e=this->aDiscordantEdges[index];
+    this->aDiscordantEdges.erase(this->aDiscordantEdges.begin()+index);
+    return e;
 }
 
 long Graph::getActiveDiscordantEdgeCount() const {
@@ -260,6 +248,43 @@ long Graph::getActiveDiscordantEdgeCount() const {
             count++;
     }
     return count;
+}
+
+void Graph::updateEdgeListsAfterConvince(Node* node){
+    std::vector<Edge*> neighbours=node->getNeighbours();
+    for(Edge* edge: neighbours){
+        if(edge->isActive()){
+            if(edge->isDiscordant())
+                this->aDiscordantEdges.push_back(edge);
+            else{
+                this->aDiscordantEdges.erase(
+                    std::remove(this->aDiscordantEdges.begin(), this->aDiscordantEdges.end(), edge),
+                    this->aDiscordantEdges.end());
+            }
+        }
+    }
+}
+
+void Graph::activateEdgeInGraph(Edge* edge){
+    if(edge->isActive())
+        return;
+    edge->activateEdge();
+    if(edge->isDiscordant())
+        aDiscordantEdges.push_back(edge);
+    this->inactiveEdges.erase(
+                std::remove(this->inactiveEdges.begin(), this->inactiveEdges.end(), edge),
+                this->inactiveEdges.end());
+}
+
+void Graph::deactivateEdgeInGraph(Edge* edge){
+    if(!edge->isActive())
+        return;
+    edge->deactivateEdge();
+    if(edge->isDiscordant())
+        this->aDiscordantEdges.erase(
+                    std::remove(this->aDiscordantEdges.begin(), this->aDiscordantEdges.end(), edge),
+                    this->aDiscordantEdges.end());
+    this->inactiveEdges.push_back(edge);
 }
 
 std::string Graph::getSummary(int epoch){
@@ -303,12 +328,8 @@ std::string Graph::getMaliciousFileName() const {
         return "noMalice";
     else if(this->maliceType==1)
         return "bots";
-    else if(this->maliceType==2)
-        return "hacker";
-    else if(this->maliceType==3)
-        return "troll";
     else
-        return "cyborg";
+        return "troll";
 }
 
 void Graph::addNode(Node* node){
