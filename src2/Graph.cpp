@@ -23,7 +23,7 @@ Graph::Graph(std::string infname, double rewire, double startRatio, double malic
     stat0=0;
     stat1=0;
     this->epochLimit=INT32_MAX;
-    this->stepCount=250 ;
+    this->stepCount=200 ;
     this->rewiringProbability=rewire; 
     this->relativeSize=0.5;
     std::cout<<outputFileName<<std::endl;
@@ -193,60 +193,32 @@ bool Graph::interact(){
 }
 
 bool Graph::interactAlt(){
-    std::vector<Edge*> roster;
+    std::vector<std::pair<Node*, Node*>> roster;
     double rando=this->getRandomNumber();
-    for(Edge* edge: edgeList){
-        if(edge->isDiscordant() && edge->getStatus()){
-            if(rando<=this->rewiringProbability){
-                if(edge->getNodeA()->hasInactiveEdge() || edge->getNodeB()->hasInactiveEdge()) //for rewiring
-                    roster.push_back(edge);
+    Node* neighbour;
+    for(Node* node: this->nodeList){
+        if(rando<=rewiringProbability){ //check viability for rewiring
+            if(node->hasInactiveEdge()){
+                neighbour=this->getRandomActiveDiscordantEdge(node);
+                if(neighbour!=nullptr)
+                    roster.push_back(std::make_pair(node, neighbour));
             }
-            else //for convincing
-                    roster.push_back(edge);
+        }
+        else{ //check viability for convincing
+            neighbour=this->getRandomActiveDiscordantEdge(node);
+            if(neighbour!=nullptr)
+                roster.push_back(std::make_pair(node, neighbour));
         }
     }
-    if(roster.size()<=1 || this->getActiveDiscordantEdgeCount()<=1){
-        this->recountStates();
+    if(roster.size()<=1){
+        std::cout<<"Roster size too small"<<std::endl;
         return true;
     }
-    Edge* e=roster[this->getRandomNumber(roster.size()-1)];
-    roster.clear();
-    Node* n1;
-    Node* n2;
-    if(rando<=this->rewiringProbability){
-        if(e->getNodeA()->hasInactiveEdge() && e->getNodeB()->hasInactiveEdge()){
-            if(this->getRandomNumber()<=0.5){
-                n1=e->getNodeA();
-                n2=e->getNodeB();
-            }
-            else{
-                n1=e->getNodeB();
-                n2=e->getNodeA();
-            }
-        }
-        else if(e->getNodeA()->hasInactiveEdge()){
-            n1=e->getNodeA();
-            n2=e->getNodeB();
-        }
-        else{
-            n1=e->getNodeB();
-            n2=e->getNodeA();
-        }
-    }
-    else{
-        if(this->getRandomNumber()<=0.5){
-            n1=e->getNodeA();
-            n2=e->getNodeB();
-        }
-        else{
-            n1=e->getNodeB();
-            n2=e->getNodeA();
-        }
-    }
+    std::pair<Node*, Node*> element=roster[this->getRandomNumber(roster.size()-1)];
     if(rando<=this->rewiringProbability)
-        this->rewire(n1, n2);
+        this->rewire(element.first, element.second);
     else
-        this->convince(n1, n2);
+        this->convince(element.first, element.second);
     return false;
 }
 
@@ -342,8 +314,7 @@ bool Graph::hasActiveDiscordantEdge(Node* node) const {
     for(const auto& pair: node->getNeighbours()){
         if(!pair.second.second)
             continue;
-        Node* n=pair.second.first;
-        if(n->getState()!=node->getState())
+        if(pair.second.first->getState()!=node->getState())
             return true;
     }
     return false;
@@ -363,7 +334,7 @@ Node* Graph::getRandomActiveDiscordantEdge(Node* node) const{
             candidates.push_back(pair.second.first);
     }
     if(candidates.size()==0){
-        std::cout<<"Active discordant edge retrival failed"<<std::endl;
+        //std::cout<<"Active discordant edge retrival failed"<<std::endl;
         return nullptr;
     }
     else if(candidates.size()==1)
