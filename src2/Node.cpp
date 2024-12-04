@@ -117,11 +117,11 @@ bool Node::hasInactiveEdge() const {
 Node* Node::getRandomInactiveEdge() const {
     std::vector<Node*> inactiveEdges;
     for(const auto& [key, val]: this->neighbours){
-        if(!val.second)
+        if(!val.second )
             inactiveEdges.push_back(val.first);
     }
     if(inactiveEdges.empty()){
-        std::cout<<"No Inactive Edge found in this node for rewiring"<<std::endl;
+        //std::cout<<"No Inactive Edge found in this node for rewiring"<<std::endl;
         return nullptr;
     }
     return inactiveEdges[this->getRandomNumber(inactiveEdges.size()-1)];

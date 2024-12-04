@@ -6,11 +6,17 @@ int main() {
     // g->displayGraph();
     //std::cout<<g->getNode(0)->getActiveDiscordantEdgeCount()<<std::endl;
     
-    
-    Graph* graph=new Graph("RealWorld/facebook", 0.9, 0.6, 0.0, 0);
-    graph->loadData();
-    graph->beginSimulation();
+    double rewiring[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
+    double start[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.1, 0.2, 0.3, 0.4, 0.5};
+    for(double st: start){
+        for(double rewire: rewiring){
+            Graph* graph=new Graph("RealWorld/facebookMedium", rewire, st, 0.0, 0);
+            graph->loadData();
+            graph->beginSimulation();
+            delete graph;
+        }
+    }
     return 0;
 }
-//To complie program: g++ botMain.cpp Node.cpp Edge.cpp Graph.cpp -o output
+//To complie program: g++ NoBot.cpp Node.cpp Edge.cpp Graph.cpp -o output
 //To run program: ./output

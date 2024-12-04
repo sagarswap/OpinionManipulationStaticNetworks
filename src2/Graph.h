@@ -17,7 +17,6 @@ class Graph {
     std::vector<Node*> nodeList;
     std::vector<Edge*> edgeList;
     std::string inputFileName, outputFileName;
-    long rew=0, con=0;
 public:
     Graph(std::string infname, double rewire, double startRatio, double maliciousRatio, int malicious);
     void loadData();
@@ -43,7 +42,7 @@ public:
     void printAllEdges(int lim) const;
     void printAllEdges() const;
     std::string getSummary(int epoch, long discEdge) const;
-    std::string getSubFolderName(double ratio) const;
+    std::string getSubFolderName() const;
 };
 
 #endif // GRAPH_H

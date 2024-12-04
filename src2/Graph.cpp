@@ -9,23 +9,24 @@ Graph::Graph(std::string infname, double rewire, double startRatio, double malic
     this->startingRatio=startRatio;
     this->malice=malicious;
     this->maliceRatio=maliciousRatio;
-    std::string rat=getSubFolderName(startRatio);
+    std::string sub=getSubFolderName();
     if(infname.substr(0, 5)=="RealW"){
         std::string fname=infname.substr(10);
         this->inputFileName="../input/"+infname+".txt";
-        this->outputFileName="../output/"+infname+"/"+rat+fname+"_r"+std::to_string(n1)+"_m"+std::to_string(n2)+"_"+std::to_string(getRandomNumber(10000))+".txt";
+        this->outputFileName="../output/RealWorld/"+fname+sub+"_r"+std::to_string(n1)+"_m"+std::to_string(n2)+"_"+std::to_string(getRandomNumber(10000))+".txt";
     }
     else if(infname.substr(0, 5)=="Watts"){
         std::string pVal=infname.substr(infname.size()-2, 2)+"/";
         this->inputFileName="../input/WattsStrogatz/"+infname+".txt";
-        this->outputFileName="../output/WattsStrogatz/"+rat+pVal+"ws_r"+std::to_string(n1)+"_m"+std::to_string(n2)+"_"+std::to_string(getRandomNumber(10000))+".txt";
+        this->outputFileName="../output/WattsStrogatz"+sub+pVal+"ws_r"+std::to_string(n1)+"_m"+std::to_string(n2)+"_"+std::to_string(getRandomNumber(10000))+".txt";
     }
     stat0=0;
     stat1=0;
-    this->epochLimit=10000000;
-    this->stepCount=500;
+    this->epochLimit=INT32_MAX;
+    this->stepCount=250 ;
     this->rewiringProbability=rewire; 
     this->relativeSize=0.5;
+    std::cout<<outputFileName<<std::endl;
 }
 
 /**
@@ -147,11 +148,6 @@ void Graph::beginSimulation(){
         std::string summary=getSummary(epoch, discEdge);
         std::cout<<summary<<std::endl;
         outputFile << summary <<std::endl;
-
-        if(discEdge<100 && !altEdgeSelectionAlgo){
-            altEdgeSelectionAlgo=true;
-            std::cout<<"Switching Algorithms"<<std::endl;
-        }
     }
     outputFile.close();
 }
@@ -180,7 +176,7 @@ bool Graph::interact(){
         tries++;
     }while(!ideal && tries<10000);
     
-    if(tries>=1000){
+    if(tries>=10000){
         std::cout<<"Tries is greater with a value of "<<tries<<std::endl;
         return true;
     }
@@ -197,37 +193,60 @@ bool Graph::interact(){
 }
 
 bool Graph::interactAlt(){
-    std::cout<<"1";
     std::vector<Edge*> roster;
     double rando=this->getRandomNumber();
     for(Edge* edge: edgeList){
-        if(edge->isDiscordant()){
-            if(rando<=rewiringProbability){
-                if(!edge->getStatus()) //for rewiring
+        if(edge->isDiscordant() && edge->getStatus()){
+            if(rando<=this->rewiringProbability){
+                if(edge->getNodeA()->hasInactiveEdge() || edge->getNodeB()->hasInactiveEdge()) //for rewiring
                     roster.push_back(edge);
             }
             else //for convincing
                     roster.push_back(edge);
         }
     }
-    std::cout<<"2";
     if(roster.size()<=1 || this->getActiveDiscordantEdgeCount()<=1){
         this->recountStates();
         return true;
     }
-    int rand=this->getRandomNumber(roster.size()-1);
-    //cout<<"random "<<rand<<" "<<edges.size()<<endl;
-    Node* node1=roster[rand];
-    std::cout<<"3";
-    if(rando<=rewiringProbability){
-        Node* node2=this->getRandomActiveDiscordantEdge(node1);
-        this->rewire(node1, node2);
+    Edge* e=roster[this->getRandomNumber(roster.size()-1)];
+    roster.clear();
+    Node* n1;
+    Node* n2;
+    if(rando<=this->rewiringProbability){
+        if(e->getNodeA()->hasInactiveEdge() && e->getNodeB()->hasInactiveEdge()){
+            if(this->getRandomNumber()<=0.5){
+                n1=e->getNodeA();
+                n2=e->getNodeB();
+            }
+            else{
+                n1=e->getNodeB();
+                n2=e->getNodeA();
+            }
+        }
+        else if(e->getNodeA()->hasInactiveEdge()){
+            n1=e->getNodeA();
+            n2=e->getNodeB();
+        }
+        else{
+            n1=e->getNodeB();
+            n2=e->getNodeA();
+        }
     }
-    else{ 
-        Node* node2=this->getRandomActiveDiscordantEdge(node1);
-        this->convince(node1, node2);
+    else{
+        if(this->getRandomNumber()<=0.5){
+            n1=e->getNodeA();
+            n2=e->getNodeB();
+        }
+        else{
+            n1=e->getNodeB();
+            n2=e->getNodeA();
+        }
     }
-    std::cout<<"4";
+    if(rando<=this->rewiringProbability)
+        this->rewire(n1, n2);
+    else
+        this->convince(n1, n2);
     return false;
 }
 
@@ -255,6 +274,9 @@ void Graph::convince(Node* inputNode, Node* outputNode){
 */
 void Graph::rewire(Node* adderNode, Node* deleterNode){
     Node* inactiveNode=adderNode->getRandomInactiveEdge();
+    if(inactiveNode==nullptr){
+        return;
+    }
     adderNode->activateEdge(inactiveNode->getId());
     inactiveNode->activateEdge(adderNode->getId());
     adderNode->inactivateEdge(deleterNode->getId());
@@ -404,19 +426,36 @@ std::string Graph::getSummary(int epoch, long discEdge) const {
     return oss.str();
 }
 
-std::string Graph::getSubFolderName(double ratio) const {
-    switch((int)(ratio*10)) {
+std::string Graph::getSubFolderName() const {
+    std::string s1, s2;
+    switch(this->malice){
+        case 0:
+            s1="/noMalice/";
+            break;
         case 1:
-            return "01/";
+            s1="/bots/";
+            break;
         case 2:
-            return "02/";
+            s1="/troll/";
+            break;
+    }
+    switch((int)(this->startingRatio*10)) {
+        case 1:
+            s2="01/";
+            break;
+        case 2:
+            s2="02/";
+            break;
         case 3:
-            return "03/";
+            s2="03/";
+            break;
         case 4:
-            return "04/";
+            s2="04/";
+            break;
         case 5:
-            return "05/";
+            s2="05/";
+            break;
     }
 
-    return "NAHI";
+    return s1+s2;
 }
