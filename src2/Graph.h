@@ -6,6 +6,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Node.h"
 #include "Edge.h"
@@ -21,6 +22,7 @@ public:
     Graph(std::string infname, double rewire, double startRatio, double maliciousRatio, int malicious);
     void loadData();
     void generateNetwork(int nodeC, int edgeC);
+    void generateMaliciousNodes();
     void generateSubNetwork();
     void beginSimulation();
     bool interact();

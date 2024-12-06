@@ -62,7 +62,9 @@ void Graph::loadData(){
     }
     std::cout<<"Data Loaded"<<std::endl;
     file.close();
-    generateSubNetwork();
+    if(this->malice>0)
+        this->generateMaliciousNodes();
+    this->generateSubNetwork();
     std::cout<<"Nodes = "<<this->nodeCount<<"\tEdges = "<<this->edgeCount<<std::endl;
 }
 
@@ -75,9 +77,8 @@ void Graph::generateNetwork(int nodeC, int edgeC){
     this->nodeCount=nodeC;
     this->edgeCount=edgeC;
     for(int i=1; i<=nodeC; i++){
-        double randState=getRandomNumber();
         Node* newNode;
-        if(randState<this->startingRatio){
+        if(getRandomNumber()<this->startingRatio){
             stat0++;
             newNode=new Node(i, false, 0);
         }
@@ -89,6 +90,28 @@ void Graph::generateNetwork(int nodeC, int edgeC){
         this->nodeList.push_back(newNode);
     }
     std::cout<<"Nodes Generated"<<std::endl;
+}
+
+void Graph::generateMaliciousNodes() {
+    int neighbourCount=(int)(this->edgeCount*2/this->nodeCount);
+    for(int i=0; i<(int)(this->nodeCount*maliceRatio); i++){
+        Node* node=new Node(this->nodeCount+i, false, this->malice);
+        this->nodeList.push_back(node);
+        std::unordered_set<int> roster;
+        while(roster.size()<neighbourCount){
+            int r=this->getRandomNumber(this->nodeCount-1);
+            if(roster.find(r)==roster.end())
+                roster.insert(r);
+        }
+        for(int num: roster){
+            Node* neighbour=this->getNode(num);
+            Edge* e=new Edge(node, neighbour);
+            this->edgeList.push_back(e);
+        }
+    }
+    this->nodeCount=nodeList.size();
+    this->edgeCount=edgeList.size();
+    std::cout<<"Finished generating malicious nodes"<<std::endl;
 }
 
 void Graph::generateSubNetwork(){
@@ -180,15 +203,11 @@ bool Graph::interact(){
         std::cout<<"Tries is greater with a value of "<<tries<<std::endl;
         return true;
     }
-
-    if(rando<=rewiringProbability){
-        Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    if(rando<=rewiringProbability)
         this->rewire(node, neighbour);
-    }
-    else{ 
-        Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    else
         this->convince(node, neighbour);
-    }
     return false;
 }
 
@@ -228,14 +247,22 @@ bool Graph::interactAlt(){
  *                      outputNode - pointer to the output node.
 */
 void Graph::convince(Node* inputNode, Node* outputNode){
-    outputNode->changeState();
-    if(outputNode->getState()){
-        this->stat1++;
-        this->stat0--;
-    }
-    else{
+    if(inputNode->getMalice()==1 || outputNode->getMalice()==1){
+        inputNode->setState(false);
+        outputNode->setState(false);
         this->stat0++;
         this->stat1--;
+    }
+    else if(inputNode->getMalice()==0 && inputNode->getMalice()==0){
+        outputNode->changeState();
+        if(outputNode->getState()){
+            this->stat1++;
+            this->stat0--;
+        }
+        else{
+            this->stat0++;
+            this->stat1--;
+        }
     }
 }
 
@@ -245,10 +272,13 @@ void Graph::convince(Node* inputNode, Node* outputNode){
  *                      outputNode - pointer to the output node.
 */
 void Graph::rewire(Node* adderNode, Node* deleterNode){
-    Node* inactiveNode=adderNode->getRandomInactiveEdge();
-    if(inactiveNode==nullptr){
+    Node* inactiveNode=nullptr;
+    if(deleterNode->getMalice()==2 && adderNode->getState())
+        inactiveNode=adderNode->getRandomInactiveZeroStateEdge();
+    else if(adderNode->getMalice()==0 && deleterNode->getMalice()<2)
+        inactiveNode=adderNode->getRandomInactiveEdge();
+    if(inactiveNode==nullptr)
         return;
-    }
     adderNode->activateEdge(inactiveNode->getId());
     inactiveNode->activateEdge(adderNode->getId());
     adderNode->inactivateEdge(deleterNode->getId());
@@ -262,7 +292,7 @@ void Graph::rewire(Node* adderNode, Node* deleterNode){
 */
 Node* Graph::getNode(int identity) const {
     if(identity<0)
-        std::cout<<"Negative node requested"<<std::endl;\
+        std::cout<<"Negative node requested"<<std::endl;
     if(nodeCount>identity)
         return nodeList[identity];
     std::cout<<"Node with id = "<<identity<<" not found"<<std::endl;
@@ -328,9 +358,9 @@ bool Graph::hasActiveDiscordantEdge(Node* node) const {
 Node* Graph::getRandomActiveDiscordantEdge(Node* node) const{
     std::vector<Node*> candidates;
     for(const auto& pair: node->getNeighbours()){
-        if(!pair.second.second)
+        if(!pair.second.second) //check if edge is active
             continue;
-        if(pair.second.first->getState()!=node->getState())
+        if(pair.second.first->getState()!=node->getState()) //check if edge is discordant
             candidates.push_back(pair.second.first);
     }
     if(candidates.size()==0){

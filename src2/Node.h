@@ -39,6 +39,7 @@ public:
     bool isActiveNeighbour(Node* node);
     bool hasInactiveEdge() const;
     Node* getRandomInactiveEdge() const;
+    Node* getRandomInactiveZeroStateEdge() const;
 
     //util
     int getRandomNumber(int limit) const;
