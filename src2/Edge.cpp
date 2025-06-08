@@ -18,9 +18,9 @@ void Edge::setStatus(bool status) {
 }
 
 Node* Edge::getOtherNode(Node* node) const {
-    if(node==nodeA)
-        return nodeB;
-    else if(node==nodeB)
+    if(node==this->nodeA)
+        return this->nodeB;
+    else if(node==this->nodeB)
         return nodeA;
     return nullptr;
 }

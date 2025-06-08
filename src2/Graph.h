@@ -45,6 +45,7 @@ public:
     void printAllEdges() const;
     std::string getSummary(int epoch, long discEdge) const;
     std::string getSubFolderName() const;
+    void saveGraphConfig(bool start, bool bots);
 };
 
 #endif // GRAPH_H

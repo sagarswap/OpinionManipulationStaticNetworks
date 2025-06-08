@@ -12,6 +12,7 @@
 *.docx
 /input
 /output
+/visualizations/outputs
 *.json
 *.ipynb
 *.tsv
