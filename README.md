@@ -13,6 +13,14 @@ This project implements a modified Voter Model to study **opinion dynamics** in 
 - **Static Network:** Node and edge topology remains fixed. Only **edge activity status** may change.
 - **Subgraph:** Each simulation starts with a subgraph by randomly deactivating edges.
 
+## Important Parameters
+
+- **Rewiring Rate(β):** Probability of the node using rewiring technique during interaction. Its complement is the convincing rate.
+- **Minority Opinion Density(ρ):** No. of real nodes with state `0` / No. of real nodes.
+- **Starting Opinion Density:** The minority opinion density at the start of the simulation.
+- **Active Discordant Edge Count (l<sub>01</sub>):** No. of active discorant edges between Real Nodes only.
+- **Bot Density(α):** % of bots to be added to the network.
+
 ##  Interaction Dynamics
 
 Each epoch (time step):
@@ -32,7 +40,6 @@ Each epoch (time step):
 - Real nodes cannot convince bots.
 - Bot-to-bot edges are disallowed.
 - Bot edge densities can be studied as well. Currently, its 2 times the average edge density in the network.
-- Bot to real node edges are not counted when calculating Active Discordant Edge count.
 
 ##  Simulation End Criteria
 
