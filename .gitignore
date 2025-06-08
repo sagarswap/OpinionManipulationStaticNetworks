@@ -14,5 +14,4 @@
 /output
 /visualizations/outputs
 *.json
-*.ipynb
 *.tsv
