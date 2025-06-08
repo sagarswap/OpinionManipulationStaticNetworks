@@ -5,7 +5,7 @@
 Graph::Graph(std::string infname, double rewire, double startRatio, double maliciousRatio, int malicious){
     std::cout<<"Constructor reached"<<std::endl;
     int n1=rewire*100.0;
-    int n2=maliciousRatio*100.0;
+    int n2=maliciousRatio*1000.0;
     this->startingRatio=startRatio;
     this->malice=malicious;
     this->maliceRatio=maliciousRatio;
@@ -41,17 +41,17 @@ void Graph::loadData(){
     file.open(this->inputFileName, std::ios::in);
     std::string tp;
     int cc=0;
-    while(getline(file, tp)){
-        std::istringstream is(tp);
+    while(getline(file, tp)){ //this reads the file, one line at a time
+        std::istringstream is(tp); //this contains the entire line
         int inputNode, outputNode;
-        is>>inputNode;
-        is>>outputNode;
-        if(cc==0){
+        is>>inputNode; //the first number of the line gets assigned to inputNode
+        is>>outputNode; //the second number of the line gets assigned to outputNode
+        if(cc==0){ //it will only run for the first line
             std::cout<<"Start Node Generation"<<std::endl;
-            this->generateNetwork(inputNode, outputNode);
+            this->generateNetwork(inputNode, outputNode); //you pass the node count and edge count here actually, since that's on the first line
             cc++;
         }
-        else{
+        else{ //adds neighbours to all the nodes
             if(inputNode==outputNode)
                 continue; //prevents edges into self
             Node* node1=getNode(inputNode);
@@ -61,8 +61,12 @@ void Graph::loadData(){
         }        
     }
     std::cout<<"Data Loaded"<<std::endl;
-    file.close();
-    generateSubNetwork();
+    file.close(); //No need to read input file anymore
+    if(this->malice>0)
+        this->generateMaliciousNodes();
+    this->generateSubNetwork();
+    this->saveGraphConfig(true, true);
+    this->saveGraphConfig(true, false);
     std::cout<<"Nodes = "<<this->nodeCount<<"\tEdges = "<<this->edgeCount<<std::endl;
 }
 
@@ -75,9 +79,8 @@ void Graph::generateNetwork(int nodeC, int edgeC){
     this->nodeCount=nodeC;
     this->edgeCount=edgeC;
     for(int i=1; i<=nodeC; i++){
-        double randState=getRandomNumber();
         Node* newNode;
-        if(randState<this->startingRatio){
+        if(getRandomNumber()<this->startingRatio){
             stat0++;
             newNode=new Node(i, false, 0);
         }
@@ -89,6 +92,28 @@ void Graph::generateNetwork(int nodeC, int edgeC){
         this->nodeList.push_back(newNode);
     }
     std::cout<<"Nodes Generated"<<std::endl;
+}
+
+void Graph::generateMaliciousNodes() {
+    int neighbourCount=(int)(this->edgeCount*2/this->nodeCount); //Can be a parameter you study, instead of hardcoding
+    for(int i=1; i<(int)(this->nodeCount*maliceRatio)+1; i++){
+        Node* bot=new Node(this->nodeCount+i, false, this->malice); //creation of bot object
+        this->nodeList.push_back(bot); //adding bot to nodeList
+        std::unordered_set<int> roster; //this will store the neighbours of the bots which we will assign randomly
+        while(roster.size()<neighbourCount){
+            int r=this->getRandomNumber(this->nodeCount-1); //get a random real nodeId
+            if(roster.find(r)==roster.end()) //ensures roster object points at the end of the array
+                roster.insert(r); //add int r into the roster, appends it at the end
+        }
+        for(int num: roster){ //we iterate through our roster
+            Node* neighbour=this->getNode(num); //obtain the node reference
+            Edge* e=new Edge(bot, neighbour); //create the edge between the bot and its victim
+            this->edgeList.push_back(e);
+        }
+    }
+    this->nodeCount=nodeList.size();
+    this->edgeCount=edgeList.size();
+    std::cout<<"Finished generating malicious nodes"<<std::endl;
 }
 
 void Graph::generateSubNetwork(){
@@ -115,8 +140,8 @@ void Graph::beginSimulation(){
     outputFile.open(this->outputFileName);
     outputFile<<"Epoch Pop Frac DiscEdge"<<std::endl;
     for(int epoch=0; epoch<this->epochLimit; epoch++){
-        for(int step=0; step<this->stepCount; step++){
-            bool areWeDone=false;
+        for(int step=0; step<this->stepCount; step++){ //control step size according to how long the simulations go, keep big step count for a long simulation
+            bool areWeDone=false; //this will trigger end of program execution
             if(!altEdgeSelectionAlgo)
                 altEdgeSelectionAlgo=interact();
             else
@@ -129,14 +154,17 @@ void Graph::beginSimulation(){
                 this->recountStates();
                 std::cout<<"Simulation Completed!"<< std::endl;
                 outputFile.close();
+                this->saveGraphConfig(false, true);
+                this->saveGraphConfig(false, false);
                 return;
             }
         }
+        //below part executes when after interaction, discordant edge count >0
         if(epoch%10==0){
             std::cout << "Epoch No. " << epoch << std::endl;
         }
         discEdge=this->getActiveDiscordantEdgeCount();
-        if(discEdge==0){
+        if(discEdge==0){ //backup for exit condition
             std::string summary=getSummary(epoch, discEdge);
             std::cout<<summary<<std::endl;
             outputFile << summary <<std::endl;
@@ -180,15 +208,11 @@ bool Graph::interact(){
         std::cout<<"Tries is greater with a value of "<<tries<<std::endl;
         return true;
     }
-
-    if(rando<=rewiringProbability){
-        Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    if(rando<=rewiringProbability)
         this->rewire(node, neighbour);
-    }
-    else{ 
-        Node* neighbour=this->getRandomActiveDiscordantEdge(node);
+    else
         this->convince(node, neighbour);
-    }
     return false;
 }
 
@@ -210,7 +234,7 @@ bool Graph::interactAlt(){
                 roster.push_back(std::make_pair(node, neighbour));
         }
     }
-    if(roster.size()<=1){
+    if(roster.size()<=5){
         std::cout<<"Roster size too small"<<std::endl;
         return true;
     }
@@ -224,31 +248,44 @@ bool Graph::interactAlt(){
 
 /**
  * This function is used to change the state of the neighbour with which our node interacted with and now hold the same state.
+ * It is expected that this function will always receieve a discordant edge
  * Input Parameters :   inputNode - pointer to the input node.
  *                      outputNode - pointer to the output node.
 */
 void Graph::convince(Node* inputNode, Node* outputNode){
-    outputNode->changeState();
-    if(outputNode->getState()){
-        this->stat1++;
-        this->stat0--;
-    }
-    else{
+    if(inputNode->getMalice()==1 || outputNode->getMalice()==1){ //if any node is a bot
+        inputNode->setState(false);
+        outputNode->setState(false);
         this->stat0++;
         this->stat1--;
+    }
+    else if(inputNode->getMalice()==0 && inputNode->getMalice()==0){ //if no bot
+        outputNode->changeState();
+        if(outputNode->getState()){ //In this case, a person converts from false to true
+            this->stat1++;
+            this->stat0--;
+        }
+        else{ //In this case,a person converts from true to false
+            this->stat0++;
+            this->stat1--;
+        }
     }
 }
 
 /**
  * This function is responsible for the deletion of an old edge and the creation of a new edge which happened as a result of interation between 2 nodes of 2 different states.
- * Input Parameters :   inputNode - pointer to the input node.
- *                      outputNode - pointer to the output node.
+ * Input Parameters :   adderNode - pointer to the node who will switch friends.
+ *                      deletertNode - pointer to the node who will loose a friend
 */
 void Graph::rewire(Node* adderNode, Node* deleterNode){
-    Node* inactiveNode=adderNode->getRandomInactiveEdge();
-    if(inactiveNode==nullptr){
+    //TODO: Rework this part
+    Node* inactiveNode=nullptr; //this person will gain a friend
+    if(deleterNode->getMalice()==1 && adderNode->getState()) //might be useless
+        inactiveNode=adderNode->getRandomInactiveZeroStateEdge();
+    else if(adderNode->getMalice()==0 && deleterNode->getMalice()==1)
+        inactiveNode=adderNode->getRandomInactiveEdge();
+    if(inactiveNode==nullptr)
         return;
-    }
     adderNode->activateEdge(inactiveNode->getId());
     inactiveNode->activateEdge(adderNode->getId());
     adderNode->inactivateEdge(deleterNode->getId());
@@ -262,7 +299,7 @@ void Graph::rewire(Node* adderNode, Node* deleterNode){
 */
 Node* Graph::getNode(int identity) const {
     if(identity<0)
-        std::cout<<"Negative node requested"<<std::endl;\
+        std::cout<<"Negative node requested"<<std::endl;
     if(nodeCount>identity)
         return nodeList[identity];
     std::cout<<"Node with id = "<<identity<<" not found"<<std::endl;
@@ -286,19 +323,21 @@ void Graph::activateEdge(Edge* edge){
 }
 
 /**
- * Iterates through all the nodes and gives the number of discordant edges except for nodes which have no inactive edges
+ * Iterates through all the nodes and gives the number of discordant edges except for nodes which have no inactive edges.
+ * Ignores all edges connected to a malicious user.
  * Retrun : Long Integer containing the count of discordant edges
 */
+//TODO: I think this function can be made faster by using this->edges instead of neighbours
 long Graph::getActiveDiscordantEdgeCount() const{
     long count=0;
     for(Node* node: nodeList){
-        if(!node->hasInactiveEdge())
+        if(!node->hasInactiveEdge() || node->getMalice()!=0) //we don't count inactive discordant edges and we don't count any discordant edge to a bot
             continue;
         for(const auto& pair:node->getNeighbours()){
             if(!pair.second.second) //Not counting inactive edges
                 continue;
             Node* neighbour=pair.second.first;
-            if(node->getState()!=neighbour->getState())
+            if(node->getState()!=neighbour->getState() && neighbour->getMalice()==0 && node->getMalice()==0)
                 count++;
         }
     }
@@ -328,9 +367,9 @@ bool Graph::hasActiveDiscordantEdge(Node* node) const {
 Node* Graph::getRandomActiveDiscordantEdge(Node* node) const{
     std::vector<Node*> candidates;
     for(const auto& pair: node->getNeighbours()){
-        if(!pair.second.second)
+        if(!pair.second.second) //check if edge is active
             continue;
-        if(pair.second.first->getState()!=node->getState())
+        if(pair.second.first->getState()!=node->getState()) //check if edge is discordant
             candidates.push_back(pair.second.first);
     }
     if(candidates.size()==0){
@@ -427,6 +466,42 @@ std::string Graph::getSubFolderName() const {
             s2="05/";
             break;
     }
-
     return s1+s2;
+}
+
+void Graph::saveGraphConfig(bool start, bool bots){
+    std::string graphFileName=this->outputFileName.substr(20, this->outputFileName.length()-24);
+    
+    if(start){
+        if(bots)
+            graphFileName="../output/NetworkConfig/"+graphFileName+"_start_bots.txt";
+        else
+            graphFileName="../output/NetworkConfig/"+graphFileName+"_start_nobots.txt";
+    }
+    else{
+        if(bots)
+            graphFileName="../output/NetworkConfig/"+graphFileName+"_end_bots.txt";
+        else
+            graphFileName="../output/NetworkConfig/"+graphFileName+"_end_nobots.txt";
+    }
+
+    std::ofstream graphFile;
+    graphFile.open(graphFileName);
+    for(Node* node: this->nodeList){
+        if(!bots && node->getMalice()>0)
+            continue;
+        std::string line=std::to_string(node->getId())+" ("+std::to_string(node->getState())+") -> ";
+        for (const auto& [key, value] : node->getNeighbours()) {
+            Node* nodePtr = value.first;  // Get Node*
+            bool flag = value.second;   
+            if(flag){
+                if(!bots && nodePtr->getMalice()>0)
+                    continue;
+                line+=std::to_string(nodePtr->getId())+" ";
+            }
+        }
+        graphFile<<line<<std::endl;
+    }
+    graphFile.close();
+    std::cout<<"Recorded Graph Config = "<<graphFileName<<std::endl;
 }

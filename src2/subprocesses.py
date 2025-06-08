@@ -9,7 +9,7 @@ def run_program_in_parallel(n):
         n (int): The number of parallel terminals to launch the program in.
     """
     # Compile the program first
-    compile_command = ["g++", "NoBot.cpp", "Node.cpp", "Edge.cpp", "Graph.cpp", "-o", "output"]
+    compile_command = ["g++", "Bots.cpp", "Node.cpp", "Edge.cpp", "Graph.cpp", "-o", "output"]
     print("Compiling the program...")
     compile_process = subprocess.run(compile_command, capture_output=True, text=True)
 
@@ -33,5 +33,5 @@ def run_program_in_parallel(n):
         print(f"Instance {i + 1} completed.")
 
 if __name__ == "__main__":
-    n = int(input("Enter the number of parallel instances: "))
-    run_program_in_parallel(n)
+    run_program_in_parallel(10)
+#Run the program with the terminal inside src2 folder

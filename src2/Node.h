@@ -13,7 +13,7 @@
 class Edge;  // Forward declaration
 
 class Node {
-    int id, malice;
+    int id, malice; //TODO: Can use boolean for malice if just studiying bots
     bool state;
     std::unordered_map<int, std::pair<Node*, bool>> neighbours;
     std::unordered_map<int, Edge*> edges;
@@ -22,7 +22,7 @@ public:
     Node(int identity, bool status, int malice);
     bool getState() const;
     int getId() const;
-    int getMalice() const;
+    int getMalice() const; //rename function to isBot
     std::unordered_map<int, std::pair<Node*, bool>> getNeighbours() const;
     void setState(bool status);
     void changeState();
@@ -39,6 +39,7 @@ public:
     bool isActiveNeighbour(Node* node);
     bool hasInactiveEdge() const;
     Node* getRandomInactiveEdge() const;
+    Node* getRandomInactiveZeroStateEdge() const;
 
     //util
     int getRandomNumber(int limit) const;

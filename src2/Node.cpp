@@ -127,6 +127,19 @@ Node* Node::getRandomInactiveEdge() const {
     return inactiveEdges[this->getRandomNumber(inactiveEdges.size()-1)];
 }
 
+Node* Node::getRandomInactiveZeroStateEdge() const {
+    std::vector<Node*> inactiveEdges;
+    for(const auto& [key, val]: this->neighbours){
+        if(!val.second && !val.first->getState())
+            inactiveEdges.push_back(val.first);
+    }
+    if(inactiveEdges.empty()){
+        //std::cout<<"No Inactive Edge found in this node for rewiring"<<std::endl;
+        return nullptr;
+    }
+    return inactiveEdges[this->getRandomNumber(inactiveEdges.size()-1)];
+}
+
 int Node::getRandomNumber(int limit) const{
     std::random_device dev;
     std::mt19937 rng(dev());
