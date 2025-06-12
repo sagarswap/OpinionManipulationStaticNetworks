@@ -141,6 +141,7 @@ void Graph::beginSimulation(){
     outputFile<<"Epoch Pop Frac DiscEdge"<<std::endl;
     for(int epoch=0; epoch<this->epochLimit; epoch++){
         for(int step=0; step<this->stepCount; step++){ //control step size according to how long the simulations go, keep big step count for a long simulation
+            //Start of interactions
             bool areWeDone=false; //this will trigger end of program execution
             if(!altEdgeSelectionAlgo)
                 altEdgeSelectionAlgo=interact();
@@ -158,8 +159,9 @@ void Graph::beginSimulation(){
                 this->saveGraphConfig(false, false);
                 return;
             }
+            //End of interactions
         }
-        //below part executes when after interaction, discordant edge count >0
+        //below part executes when after interaction, discordant edge count >0, mostly just for printing on terminal and output file
         if(epoch%10==0){
             std::cout << "Epoch No. " << epoch << std::endl;
         }
@@ -182,19 +184,22 @@ void Graph::beginSimulation(){
 
 /**
  * This function is responsible for the interactions between the nodes, which are further controlled by convince() and rewire().
- * It iterates through every edge and uses random number generation to decide on its interaction
+ * This randomly picks a node and checks if it has an active discordant edge. The algo will keep selecting random nodes until it finds such a node.
  * Input Parameter - An integer variable between 0 and 0.1 which controls how often an interaction occurs. 
+ * 
+ * Return Value - If it returns false, the first algo will continue to play.
+ *                  If it returns true, then we will switch to the 2nd algo
 */
-bool Graph::interact(){
+bool Graph::interact(){ //Best case scenario O(1), worst case scenario: doesn't work
     bool ideal=false;
-    double rando=this->getRandomNumber();
+    double rando=this->getRandomNumber(); //decides whether we rewire or convince
     Node* node;
     int tries=0;
     do{
         rando=this->getRandomNumber();
         node=this->getRandomNode();
         if(rando<=rewiringProbability){ //check viability for rewiring
-            if(node->hasInactiveEdge() && this->hasActiveDiscordantEdge(node))
+            if(node->hasInactiveEdge() && this->hasActiveDiscordantEdge(node)) //conditions for rewiring
                 ideal=true;
         }
         else{ //check viability for convincing
@@ -216,9 +221,15 @@ bool Graph::interact(){
     return false;
 }
 
-bool Graph::interactAlt(){
-    std::vector<std::pair<Node*, Node*>> roster;
-    double rando=this->getRandomNumber();
+/**
+ * We iterate through the entire nodeList and create a list of neighbours which CAN interact, given our policies.
+ * 
+ * Return Value - If it returns false, the simulation will continue.
+ *                  If it returns true, simulation will end.
+*/
+bool Graph::interactAlt(){ // works in O(N)
+    std::vector<std::pair<Node*, Node*>> roster; //this is a list of neighbours like  [(1, 2), (3 ,4), .....]
+    double rando=this->getRandomNumber(); //decides whether we rewire or convince
     Node* neighbour;
     for(Node* node: this->nodeList){
         if(rando<=rewiringProbability){ //check viability for rewiring
@@ -234,7 +245,7 @@ bool Graph::interactAlt(){
                 roster.push_back(std::make_pair(node, neighbour));
         }
     }
-    if(roster.size()<=5){
+    if(roster.size()<=5){ //you can choose to comment this out if you feel it messes up with your data quality
         std::cout<<"Roster size too small"<<std::endl;
         return true;
     }
@@ -274,12 +285,12 @@ void Graph::convince(Node* inputNode, Node* outputNode){
 
 /**
  * This function is responsible for the deletion of an old edge and the creation of a new edge which happened as a result of interation between 2 nodes of 2 different states.
- * Input Parameters :   adderNode - pointer to the node who will switch friends.
- *                      deletertNode - pointer to the node who will loose a friend
+ * Input Parameters :   adderNode - pointer to the node who will switch friends. Has active discordant edge to deleterNode.
+ *                      deletertNode - pointer to the node who will loose adderNode as a friend (inactivation).
 */
 void Graph::rewire(Node* adderNode, Node* deleterNode){
     //TODO: Rework this part
-    Node* inactiveNode=nullptr; //this person will gain a friend
+    Node* inactiveNode=nullptr; //this person will gain adderNode as a friend
     if(deleterNode->getMalice()==1 && adderNode->getState()) //might be useless
         inactiveNode=adderNode->getRandomInactiveZeroStateEdge();
     else if(adderNode->getMalice()==0 && deleterNode->getMalice()==1)
@@ -505,3 +516,34 @@ void Graph::saveGraphConfig(bool start, bool bots){
     graphFile.close();
     std::cout<<"Recorded Graph Config = "<<graphFileName<<std::endl;
 }
+
+// void Graph::rewire(Node* nodeA, Node* nodeB){
+//     //TODO: Rework this part
+//     Node* inactiveNode=nullptr; //this is the new girlfriend
+//     Node* switcherNode; //this guys breaks up and finds someone else
+//     Node* victimNode; //gets heart broken
+//     if(nodeA->getMalice()>0){
+//         switcherNode=nodeB;
+//         victimNode=nodeA;
+//     }
+//     else if(nodeB->getMalice()>0){
+//         switcherNode=nodeA;
+//         victimNode=nodeB;
+//     }
+//     else{ 
+//         double r=this->getRandomNumber();
+//         if(r>0.5){
+//             switcherNode=nodeA;
+//             victimNode=nodeB;
+//         }
+//         else{
+//             switcherNode=nodeB;
+//             victimNode=nodeA;
+//         } 
+//     }
+//     inactiveNode=switcherNode->getRandomInactiveEdge();
+//     switcherNode->activateEdge(inactiveNode);
+//     switcherNode->inactivateEdge(victimNode);
+//     victimNode->inactivateEdge(switcherNode);
+//     inactiveNode->activateEdge(switcherNode);
+// }

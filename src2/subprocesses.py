@@ -33,5 +33,5 @@ def run_program_in_parallel(n):
         print(f"Instance {i + 1} completed.")
 
 if __name__ == "__main__":
-    run_program_in_parallel(10)
+    run_program_in_parallel(10) #Use this to manage number of terminals
 #Run the program with the terminal inside src2 folder
